@@ -1,0 +1,18 @@
+{
+  "name": "bigquery-query-guard",
+  "version": "0.1.0",
+  "description": "A small query boundary for BigQuery: authorize, cache, estimate, cap, trace.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "exports": { ".": "./src/index.js", "./bigquery": "./src/bigquery.js", "./gcs": "./src/gcs.js" },
+  "files": ["src", "README.md", "LICENSE"],
+  "scripts": {
+    "test": "node --test",
+    "dev": "node scripts/serve.js",
+    "demo": "node examples/offline.js",
+    "check:public": "node scripts/check-public.js"
+  },
+  "peerDependencies": { "@google-cloud/bigquery": "^8.1.1", "@google-cloud/storage": "^7.21.0" },
+  "peerDependenciesMeta": { "@google-cloud/bigquery": { "optional": true }, "@google-cloud/storage": { "optional": true } }
+}
