@@ -1,5 +1,3 @@
-![BigQuery Query Guard: authorize, reuse, estimate, enforce](docs/images/cover.svg)
-
 # BigQuery Query Guard
 
 A small JavaScript query boundary for applications using BigQuery: **authorize → cache → dry run → engine-enforced byte limit → trace**.
@@ -8,7 +6,9 @@ A standalone adaptation of patterns used at [Bakiano](https://bakiano.com), with
 
 **[Try the demo](#try-it-without-gcp) · [Integration](#connect-your-own-bigquery-project) · [Design](docs/architecture.md) · [Guarantees](docs/guarantees.md)**
 
-![The live sandbox shows one warehouse execution, two cache hits and an oversized query stopped before execution.](docs/images/demo.png)
+The default demo is a **BigQuery scan lab**: compare reviewed SQL variants, recorded scan estimates, output schemas, and a per-query byte cap. The cache and authorization sandbox remains available at `/guard`.
+
+![Three selected columns retain the required fields while reducing the recorded scan estimate.](docs/images/scan-lab.jpg)
 
 ## Try it without GCP
 
@@ -22,9 +22,35 @@ npm run dev
 
 Open **http://127.0.0.1:4312**.
 
-Run a query, repeat it, request it from instance B, and attempt an oversized query. The sandbox executes the **real guard library** with simulated warehouse and shared-cache adapters. Local elapsed times and simulated byte counts are labeled; they are not GCP benchmarks or savings claims.
+Switch between five experiments. Each choice displays the exact SQL, bytes BigQuery estimated, and the resulting schema. The page reads bundled measurements; it sends no Google Cloud requests and cannot run arbitrary SQL.
+
+| Experiment | Recorded observation | What changes |
+| --- | --- | --- |
+| `LIMIT 100` → `LIMIT 10` | Both estimate 7,487,651,196 bytes | Fewer returned rows; same scan |
+| `SELECT *` → three columns | 7,487,651,196 → 978,926,553 bytes | Required fields stay; other fields disappear |
+| Date filter on the taxi table | Both estimate 978,926,553 bytes | Narrower answer; no scan reduction |
+| Time slice on the Bitcoin view | 130,686,374,250 → 169,415,050 bytes | One day instead of all history |
+| Count transactions → sum block counts | 27,659,600 → 23,274,984 bytes | Same verified count, less detail available |
+
+Measurements were recorded on **2026-10-04** using public datasets. The two aggregate queries both returned **657,752** transactions for 2024-01-01 UTC. These numbers are **scan estimates**, not latency benchmarks or dollar savings. Exact queries, output schemas, timestamps, and observed aggregate billing metadata are committed in [`data/query-estimates.js`](data/query-estimates.js). [Evidence and reproduction](docs/scan-lab.md).
+
+The byte-cap control invokes the **real guard library** with a local adapter. A blocked estimate never reaches that adapter's execution method. An allowed request still does not execute BigQuery, and its billed bytes remain unknown.
+
+At **http://127.0.0.1:4312/guard**, run a simulated query, repeat it, request it from instance B, and try an oversized query. That separate sandbox uses simulated warehouse and shared-cache adapters, with simulated byte counts and local elapsed times labeled.
 
 For a terminal version: `npm run demo`.
+
+### Re-record with BigQuery
+
+Optional: install `@google-cloud/bigquery`, authenticate with Application Default Credentials, and set `GOOGLE_CLOUD_PROJECT` to your own sandbox billing project.
+
+```sh
+npm run record:estimates
+# Optional: execute two count checks, each capped at 50,000,000 bytes.
+npm run record:estimates -- --verify-summary
+```
+
+The default recorder submits **eight dry runs only**. The optional summary check executes two fixed aggregate queries, with `maximumBytesBilled` enforced by BigQuery on each. The recorder saves only public SQL, selected statistics, and output schemas; it omits job IDs, project identifiers, and credentials. Commit a refreshed recording only after reviewing the diff. Recording again without verification removes the previously verified counts, so the lab does not claim they were checked in a newer recording.
 
 ## What it does
 
@@ -106,7 +132,7 @@ npm run demo
 npm run check:public
 ```
 
-Tests cover authorization before cache, scope isolation, publication invalidation, expiry, concurrent reuse, failure recovery, zero/unknown billing, SDK options, partial-result rejection and GCS handling. The initial release uses mocked cloud adapters in tests; it does not claim a live cloud integration audit.
+Tests cover authorization before cache, scope isolation, publication invalidation, expiry, concurrent reuse, failure recovery, zero/unknown billing, SDK options, partial-result rejection and GCS handling. Lab checks ensure measurements stay attached to the exact SQL recorded, that the recorder defaults to dry runs, and that both optional executions have a byte cap. CI uses mocked cloud adapters; public-data measurements are recorded evidence, not a live cloud integration audit.
 
 ## Google Cloud building blocks
 

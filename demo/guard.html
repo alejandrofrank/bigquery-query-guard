@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BigQuery Query Guard · Bakiano</title><meta name="description" content="Watch a query cross authorization, cache, dry-run and engine-level byte limits."><link rel="icon" href="/docs/images/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/demo/style.css"><link rel="stylesheet" href="/demo/guard.css"><script type="module" src="/demo/app.js"></script></head>
+<body><div class="wrap">
+<nav><a class="brand" href="https://bakiano.com">Bakiano<span> / labs</span></a><div class="row"><span class="pill">Real guard · simulated warehouse</span><a href="https://github.com/alejandrofrank/bigquery-query-guard">GitHub ↗</a></div></nav>
+<header class="hero"><div><div class="eyebrow">02 / BigQuery Query Guard</div><h1>Every query.<br><em>A boundary.</em></h1><p>Authorize before the cache. Estimate before execution.<br>Keep an engine-enforced byte limit on every warehouse query.</p></div><img class="hero-mark" src="/docs/images/icon.svg" alt="" width="155" height="130"></header>
+<div class="flow"><b>Application request</b><span class="arrow">→</span><b>Query Guard</b><span class="arrow">→</span><b>Memory / shared cache</b><span class="arrow">→</span><b>BigQuery</b><span class="muted"> &nbsp; / &nbsp; Zero cloud calls in this sandbox</span></div>
+<main>
+<div class="workbench">
+<section class="panel controls"><div class="panel-head"><div class="eyebrow">Try the boundary</div><h2>One request. Six outcomes.</h2><p class="note">Run once, repeat, then try another instance. The cache actually changes.</p></div><div class="panel-body">
+<button class="primary" data-action="run"><b>01</b> Run / repeat query <span>→</span></button>
+<button data-action="instance-b"><b>02</b> Request from instance B <span>→</span></button>
+<button data-action="oversized"><b>03</b> Try an oversized query <span>→</span></button>
+<button data-action="denied"><b>04</b> Try without permission <span>→</span></button>
+<button data-action="tenant"><b>05</b> Switch tenant scope <span>→</span></button>
+<button data-action="refresh"><b>06</b> Publish a new version <span>→</span></button>
+<div class="boundary"><small>PER-QUERY LIMIT</small><strong>100 MB</strong><p class="note">Normal fixture: 48 MB<br>Oversized fixture: 8 GB</p></div><button id="reset">↺ Reset sandbox</button>
+</div></section>
+<section class="monitor">
+<div class="panel"><div class="panel-head row"><div><div class="eyebrow">Request path</div><h2 id="outcome" aria-live="polite">Ready for your first query.</h2></div><span class="tag" id="source">IDLE</span></div>
+<div class="route">
+<div class="node" id="auth"><span>01 / ACCESS</span><strong>Authorize</strong><small>Every request</small></div><i>→</i>
+<div class="node" id="memory"><span>02 / L1</span><strong>Memory</strong><small>This instance</small></div><i>→</i>
+<div class="node" id="shared"><span>03 / L2</span><strong>Shared cache</strong><small>Across instances</small></div><i>→</i>
+<div class="node" id="estimate"><span>04 / ESTIMATE</span><strong>Dry run</strong><small>Refuse over limit</small></div><i>→</i>
+<div class="node" id="warehouse"><span>05 / EXECUTE</span><strong>BigQuery</strong><small>Hard byte cap</small></div>
+</div><div class="route-note"><span class="yes">● Traversed</span><span class="no">● Stopped</span><span>Shared storage and warehouse are in-memory adapters here.</span></div></div>
+<div class="stat-row"><div class="stat"><strong id="executions">0</strong><span>warehouse executions</span></div><div class="stat"><strong id="cache">0</strong><span>application cache hits</span></div><div class="stat"><strong id="billed">0 MB</strong><span>simulated billed bytes · session</span></div></div>
+<div class="panel"><div class="panel-head"><div class="row"><h3>Execution log</h3><span class="note">Measured local time, not GCP latency</span></div></div><div class="table-scroll"><table><thead><tr><th>Request</th><th>Outcome</th><th>Bytes billed</th><th>Local time</th></tr></thead><tbody id="log"><tr><td colspan="4" class="muted">Choose an action to inspect its path.</td></tr></tbody></table></div></div>
+<details class="trace"><summary>Inspect the latest trace and result</summary><pre id="trace">No request yet.</pre></details>
+</section></div>
+<p class="note">A byte cap bounds eligible on-demand query processing. It is not a monthly budget, SQL sandbox, or cap on all Google Cloud charges. Production usage needs reviewed queries, application authorization and least-privilege IAM.</p>
+</main><footer class="foot"><span>Extracted as a standalone pattern from Bakiano · MIT licensed</span><span>BigQuery + Cloud Storage adapters included. Credentials optional.</span></footer></div></body></html>
