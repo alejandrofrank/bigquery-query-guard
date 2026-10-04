@@ -22,6 +22,17 @@ export async function recordEstimates(client) {
 export async function saveEstimates(data) {
   await writeFile(new URL('../data/query-estimates.js',import.meta.url),'// Recorded public-data dry runs. No credentials, job IDs or billing-project identifiers.\nexport const measurements = '+JSON.stringify(data,null,2)+';\n');
 }
+export async function recordSources(client) {
+  const names=[...new Set(Object.values(queries).flatMap(sql=>[...sql.matchAll(/(?:FROM|JOIN)\s+`([^`]+)`/g)].map(match=>match[1])))];
+  const sources={};
+  for(const name of names) {
+    const [projectId,dataset,table]=name.split('.');
+    if(projectId!=='bigquery-public-data') throw new Error('Recorder only publishes public-data sources');
+    const [metadata]=await client.dataset(dataset,{projectId}).table(table).getMetadata();
+    sources[name]={type:metadata.type,partitioning:metadata.timePartitioning?{type:metadata.timePartitioning.type,field:metadata.timePartitioning.field??null}:null};
+  }
+  return sources;
+}
 export async function verifySummary(client) {
   const results = {};
   for (const id of ['transactionCount', 'blockCount']) {
@@ -46,9 +57,10 @@ if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))
   const { BigQuery } = await import('@google-cloud/bigquery');
   const client = new BigQuery({projectId:process.env.GOOGLE_CLOUD_PROJECT});
   const data = await recordEstimates(client);
+  data.sources = await recordSources(client);
   if(process.argv.includes('--verify-summary')) data.summaryVerification = await verifySummary(client);
   if(process.argv.includes('--benchmark')) data.benchmarks = await benchmarkQueries(client,data,{onProgress:step=>console.log(step.id+' · sample '+step.sample+'/'+step.samples)});
   await saveEstimates(data);
   console.log('Recorded '+Object.keys(queries).length+' public-data dry-run estimates. '+
-    (data.benchmarks ? 'Benchmark executions capped at 250 MB each; 15 GB total reservation ceiling.' : data.summaryVerification ? 'Executed two aggregate checks, each capped at 50 MB.' : 'No data queries executed.'));
+    (data.benchmarks ? 'Benchmark executions capped at 300 MB each; 15 GB total reservation ceiling.' : data.summaryVerification ? 'Executed two aggregate checks, each capped at 50 MB.' : 'No data queries executed.'));
 }

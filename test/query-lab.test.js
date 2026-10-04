@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { experiments, selection, checkLimit, measurements } from '../examples/query-lab.js';
 import { queries } from '../examples/query-specs.js';
-import { recordEstimates, verifySummary } from '../scripts/record-estimates.js';
+import { recordEstimates, recordSources, verifySummary } from '../scripts/record-estimates.js';
 
 test('published estimates stay attached to the exact SQL that was measured', () => {
   assert.deepEqual(Object.keys(measurements.queries), Object.keys(queries));
@@ -69,4 +69,13 @@ test('optional verification caps both real aggregate executions and preserves un
   }
   assert.equal(data.equal, true);
   assert.equal(data.results.transactionCount.billedBytes, null);
+});
+test('public source inspection stores partition facts without physical-view internals',async()=>{
+  const sources=await recordSources({dataset(name,{projectId}){
+    assert.equal(projectId,'bigquery-public-data');
+    return {table(){return {async getMetadata(){return [{type:'TABLE',id:'private-id',timePartitioning:{type:'DAY',field:'date'},view:{query:'not published'}}];}};}};
+  }});
+  assert.ok(Object.keys(sources).length>=3);
+  assert.equal(JSON.stringify(sources).includes('private'),false);
+  assert.equal(JSON.stringify(sources).includes('not published'),false);
 });
