@@ -21,8 +21,8 @@ export function relativeChange(original,current) {
   if(original===0)return current===0?0:null;
   return (current/original-1)*100;
 }
-export function comparisonFor(id,rate=pricing.usdPerTiB,recording=measurements) {
-  const experiment=experiments.find(item=>item.id===id);
+export function comparisonFor(id,rate=pricing.usdPerTiB,recording=measurements,cases=experiments) {
+  const experiment=cases.find(item=>item.id===id);
   if(!experiment)throw new Error('Unknown reviewed query');
   const versions=experiment.variants.map((queryId,index)=>{
     const query=recording.queries[queryId];
@@ -33,7 +33,7 @@ export function comparisonFor(id,rate=pricing.usdPerTiB,recording=measurements) 
       billedCost:processingCost(runtime.billedBytes===null?null:String(runtime.billedBytes),rate),
       output:runtime.representative?.output??[]};
   });
-  return {experiment,context:context[id],versions,
+  return {experiment,context:experiment.context??context[id],versions,
     scanChange:relativeChange(Number(versions[0].query.bytes),Number(versions[1].query.bytes)),
     timeChange:relativeChange(versions[0].runtime.jobMs,versions[1].runtime.jobMs),
     result:compareResults(...experiment.variants,recording)};

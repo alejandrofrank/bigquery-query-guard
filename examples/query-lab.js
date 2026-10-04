@@ -28,23 +28,23 @@ export const experiments = [
     lesson:'A WITH expression is not a promise of a cached intermediate table. Inspect the actual stage counts and runtime: the optimizer may combine repeated work or choose different plans.',tradeoff:'The outputs target the same metrics. Floating-point averages can vary slightly with aggregation order, so exact result fingerprints can differ.',changed:[],maxRows:[1,1],source:'blocks',docs:'https://docs.cloud.google.com/bigquery/docs/best-practices-performance-compute'},
 ];
 export const groups=[{id:'scan',label:'Scan & output'},{id:'storage',label:'Partitions & storage'},{id:'composition',label:'Query structure'}];
-export function selection(id='limit',variant=0) {
-  const experiment=experiments.find(e=>e.id===id);
+export function selection(id='limit',variant=0,cases=experiments,recording=measurements) {
+  const experiment=cases.find(e=>e.id===id);
   if(!experiment || !Number.isInteger(variant) || variant<0 || variant>1) throw new Error('Unknown reviewed query');
-  const queryId=experiment.variants[variant], query=measurements.queries[queryId], baseline=measurements.queries[experiment.baseline];
+  const queryId=experiment.variants[variant], query=recording.queries[queryId], baseline=recording.queries[experiment.baseline];
   if(!query || query.sql.trim()==='') throw new Error('Missing recorded query');
   const reduction=(1-Number(query.bytes)/Number(baseline.bytes))*100;
-  return {experiment,variant,queryId,query,baseline,reduction,recordedAt:measurements.capturedAt};
+  return {experiment,variant,queryId,query,baseline,reduction,recordedAt:recording.capturedAt};
 }
-export async function checkLimit(id,variant,limit) {
+export async function checkLimit(id,variant,limit,lab={experiments,measurements}) {
   if(!['100000000','1000000000','10000000000','200000000000'].includes(limit)) throw new Error('Unknown byte cap');
-  const selected=selection(id,variant); let executions=0;
+  const selected=selection(id,variant,lab.experiments,lab.measurements); let executions=0;
   const guard=createQueryGuard({authorize:async r=>r.principal==='local-lab',engine:{namespace:'recorded-estimates-local-adapter',
     async estimate(){return selected.query.bytes;},
     async execute(){executions++;return {rows:selected.query.schema,billedBytes:null,nativeCacheHit:false};}
   }});
   try {
-    const result=await guard.run({principal:'local-lab',queryId:selected.queryId,sql:selected.query.sql,params:{},location:'US',scope:{kind:'shared',id:'public-recordings'},publication:measurements.capturedAt,maxBytesBilled:limit});
+    const result=await guard.run({principal:'local-lab',queryId:selected.queryId,sql:selected.query.sql,params:{},location:'US',scope:{kind:'shared',id:'recorded-lab'},publication:lab.measurements.capturedAt,maxBytesBilled:limit});
     return {allowed:true,executions,trace:result.trace};
   } catch(error) {
     if(error.name!=='QueryLimitError') throw error;
