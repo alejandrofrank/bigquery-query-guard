@@ -6,9 +6,9 @@ A standalone adaptation of patterns used at [Bakiano](https://bakiano.com), with
 
 **[Try the demo](#try-it-without-gcp) · [Integration](#connect-your-own-bigquery-project) · [Design](docs/architecture.md) · [Guarantees](docs/guarantees.md)**
 
-The default demo is a **BigQuery scan lab**: compare reviewed SQL variants, recorded scan estimates, output schemas, and a per-query byte cap. The cache and authorization sandbox remains available at `/guard`.
+The default demo is a **BigQuery scan lab**: compare reviewed SQL variants, scan estimates, list-rate costs, real runtime samples, output, and execution stages. The cache and authorization sandbox remains available at `/guard`.
 
-![Three selected columns retain the required fields while reducing the recorded scan estimate.](docs/images/scan-lab.jpg)
+![The count comparison separates estimated scan cost, measured engine time, and observed billed bytes.](docs/images/scan-lab.jpg)
 
 ## Try it without GCP
 
@@ -22,7 +22,7 @@ npm run dev
 
 Open **http://127.0.0.1:4312**.
 
-Switch between five experiments. Each choice displays the exact SQL, bytes BigQuery estimated, and the resulting schema. The page reads bundled measurements; it sends no Google Cloud requests and cannot run arbitrary SQL.
+Switch between **12 experiments in three groups**: scan/output, partition/storage, and query structure. Each choice displays exact SQL and scan estimates. Eligible queries also show three real execution samples, median/range, client time, slot milliseconds, billed bytes, aggregate previews and execution-stage counters. The page replays bundled evidence; it sends no Google Cloud requests and cannot run arbitrary SQL.
 
 | Experiment | Recorded observation | What changes |
 | --- | --- | --- |
@@ -31,8 +31,19 @@ Switch between five experiments. Each choice displays the exact SQL, bytes BigQu
 | Date filter on the taxi table | Both estimate 978,926,553 bytes | Narrower answer; no scan reduction |
 | Time slice on the Bitcoin view | 130,686,374,250 → 169,415,050 bytes | One day instead of all history |
 | Count transactions → sum block counts | 27,659,600 → 23,274,984 bytes | Same verified count, less detail available |
+| Seven date partitions → one | 84,718,248 → 11,719,744 bytes | Less history; daily partition metadata inspected |
+| `FORMAT_DATE` → direct partition predicate | 377,552,864 → 11,719,744 bytes | Same requested date; very different estimates |
+| `UNION ALL` → `UNION DISTINCT` | 310 → 155 output rows counted | Duplicates kept versus removed; different answers |
+| Raw join → aggregate before join | Both estimate 256,696,240 bytes | Same captured 100 ordered blocks; different execution work |
+| Correlated array aggregate → `UNNEST` | Both estimate 92,065,952 bytes | Same captured total; planner chooses physical strategy |
+| Cartesian → keyed join | 24,025 → 155 pairs | Intentionally different result meanings |
+| Repeated CTE → one aggregate pass | Both estimate 31,033,312 bytes | Same captured metrics; CTE reuse is not a cache promise |
 
-Measurements were recorded on **2026-10-04** using public datasets. The two aggregate queries both returned **657,752** transactions for 2024-01-01 UTC. These numbers are **scan estimates**, not latency benchmarks or dollar savings. Exact queries, output schemas, timestamps, and observed aggregate billing metadata are committed in [`data/query-estimates.js`](data/query-estimates.js). [Evidence and reproduction](docs/scan-lab.md).
+Measurements were recorded on **2026-10-04** using public datasets: **21 dry runs, 15 eligible queries, 45 completed execution samples**. Six oversized queries have no fabricated runtime. The two count queries returned **657,752** transactions for 2024-01-01 UTC. The summary estimated fewer bytes but had a **3.61 s** engine median versus **613 ms** for counting transactions. Scan size, compute work and elapsed time answer different questions.
+
+Cost uses an adjustable assumed US on-demand rate of **$6.25/TiB**. It shows scan × rate and observed billed bytes × rate separately, before free allowance, discounts and tax. It is not an invoice; scan estimates also exclude billing minimums. Decimal MB/GB are converted to binary TiB for pricing. [Google pricing](https://cloud.google.com/bigquery).
+
+Exact SQL, schemas, timestamps, timings and public execution counters are in [`data/query-estimates.js`](data/query-estimates.js). [Evidence, semantic differences and reproduction](docs/scan-lab.md).
 
 The byte-cap control invokes the **real guard library** with a local adapter. A blocked estimate never reaches that adapter's execution method. An allowed request still does not execute BigQuery, and its billed bytes remain unknown.
 
@@ -52,9 +63,9 @@ npm run record:estimates -- --verify-summary
 npm run record:estimates -- --benchmark
 ```
 
-The default recorder submits **eight dry runs only**. The optional summary check executes two fixed aggregate queries, with `maximumBytesBilled` enforced by BigQuery on each. The recorder saves only public SQL, selected statistics, and output schemas; it omits job IDs, project identifiers, and credentials. Commit a refreshed recording only after reviewing the diff. Recording again without verification removes the previously verified counts, so the lab does not claim they were checked in a newer recording.
+The default recorder submits **21 dry runs only**, plus read-only public source metadata requests. The optional summary check executes two fixed aggregate queries, with `maximumBytesBilled` enforced by BigQuery on each. The recorder saves only public SQL, selected statistics, and output schemas; it omits billing project identifiers, job IDs, identities, and credentials. Commit a refreshed recording only after reviewing the diff. Recording again without execution removes old runtime samples and verified output.
 
-`--benchmark` is a separate opt-in that executes eligible queries three times, sequentially, with query-result-cache reuse disabled. Every attempt reserves its full **250 MB** hard cap against a **15 GB** batch ceiling. Queries with larger dry-run estimates are skipped. Recorded metadata separates engine time, queue time, client elapsed time, processed/billed bytes, slot time, and whitelisted execution-stage counters. It is not a controlled cold-cache benchmark.
+`--benchmark` is a separate opt-in that executes eligible queries three times, sequentially, with query-result-cache reuse disabled. Every attempt reserves its full **300 MB** hard cap against a **15 GB** batch ceiling, including failures. Queries with larger dry-run estimates are skipped. Public sources and estimates can change; the engine may reject a query that was eligible at preflight. Failed or missing measurements stay unknown. This is a small observational sample, not a controlled cold-cache benchmark.
 
 ## What it does
 
@@ -136,7 +147,7 @@ npm run demo
 npm run check:public
 ```
 
-Tests cover authorization before cache, scope isolation, publication invalidation, expiry, concurrent reuse, failure recovery, zero/unknown billing, SDK options, partial-result rejection and GCS handling. Lab checks ensure measurements stay attached to the exact SQL recorded, that the recorder defaults to dry runs, and that both optional executions have a byte cap. CI uses mocked cloud adapters; public-data measurements are recorded evidence, not a live cloud integration audit.
+Tests cover authorization before cache, scope isolation, publication invalidation, expiry, concurrent reuse, failure recovery, zero/unknown billing, SDK options, partial-result rejection and GCS handling. Lab checks cover exact SQL/recording agreement, safe metadata publication, capped execution, decimal normalization, TiB pricing, median calculation, and incomplete result comparisons. CI uses mocked cloud adapters; public-data measurements are recorded evidence, not a live cloud integration audit.
 
 ## Google Cloud building blocks
 
