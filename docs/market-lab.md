@@ -47,6 +47,8 @@ Review and curate the external capture before publishing a replacement. Preserve
 
 ## Page flow
 
-Choose a scenario in the sidebar or compact selector. The frozen input appears first, followed by the question and SQL change. Both approaches' reading, cost, runtime and output remain together in one comparison. SQL, selected outputs, runs/stages, the local byte-cap guard and measurement definitions have separate inspector tabs.
+Choose a scenario in the sidebar or compact selector. The question and SQL change introduce two A/B blocks: each starts with the exact query, then its recorded reading, runtime, cost and output. Changed SQL lines are highlighted in B, and corresponding measurements align across both blocks on wider screens. On narrow screens, A and B stack in order.
+
+Findings follow both blocks and explain whether the captured results match, what changed in reading and time, and the interpretation limits. Expand the frozen input or technical explanation when needed. Selected output previews, runs/stages, the local byte-cap guard and measurement definitions remain in the evidence tabs below; SQL stays visible above them.
 
 The byte-cap button exercises the actual guard library against saved estimates with a local adapter. It never submits a warehouse job. `/reference` retains other public-dataset experiments; `/guard` retains the simulated cache and authorization sandbox.

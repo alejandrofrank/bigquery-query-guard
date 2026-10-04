@@ -4,11 +4,11 @@ import {comparisonFor} from '/examples/query-comparison.js';
 import {pricing} from '/examples/query-metrics.js';
 import {renderComparison,previewHTML,escape,number,bytes,duration} from '/demo/metrics.js';
 const $=id=>document.getElementById(id);
-const views=['sql','output','runs','limits','method'];
+const views=['output','runs','limits','method'];
 const labels={limit:'Return fewer rows',columns:'Read fewer columns',dates:'Filter an unpartitioned date',time:'Filter time in a view',summary:'Count versus a summary',partitions:'Read fewer partitions',predicate:'Change the date predicate',union:'Keep or remove duplicates',joins:'Group before joining',correlated:'Sum nested arrays',cross:'All pairs versus matching pairs',cte:'Reuse a WITH expression'};
 const params=new URLSearchParams(location.search);
 let experiment=experiments.some(e=>e.id===params.get('case'))?params.get('case'):reference?'summary':experiments[0].id;
-let view=views.includes(params.get('view'))?params.get('view'):'sql',runVariant=0,guardSequence=0;
+let view=views.includes(params.get('view'))?params.get('view'):'output',runVariant=0,guardSequence=0;
 function model(){const rate=$('price-rate').valueAsNumber;return comparisonFor(experiment,Number.isFinite(rate)&&rate>=0&&rate<=1000?rate:pricing.usdPerTiB,measurements,experiments);}
 function showView(next,focus=false){
   view=next;
@@ -42,8 +42,8 @@ function render(){
   $('dataset-panel').hidden=reference;
   if(!reference){$('dataset-name').textContent=measurements.input.name+' · '+measurements.input.date;$('dataset-rows').innerHTML=previewHTML(measurements.input.rows.map(row=>({Chain:row.source,Listing:row.product_name,'Price as scraped':row.price_current})));$('dataset-note').textContent=measurements.input.note;}
   const valid=$('price-rate').value!==''&&$('price-rate').validity.valid;
+  $('sql-pair').innerHTML=m.versions.map((v,i)=>'<article class="variant-card" aria-labelledby="variant-'+i+'-title"><header class="variant-heading"><div class="variant-label"><span aria-hidden="true">'+('AB'[i])+'</span><h3 id="variant-'+i+'-title" aria-label="'+('AB'[i])+' · '+escape(v.label)+'">'+escape(v.label)+'</h3></div><button type="button" data-copy="'+i+'" aria-label="Copy SQL '+('AB'[i])+'">Copy SQL</button></header><div class="variant-query"><pre class="sql-code" aria-label="SQL '+('AB'[i])+'">'+sqlHTML(v.query.sql,m.versions[0].query.sql,i===1)+'</pre><div class="source-name">'+sources(v.query.sql).map(escape).join('<br>')+'</div></div><div class="variant-results"><h4>Recorded results</h4><dl id="variant-'+i+'-metrics" class="variant-metrics"></dl></div></article>').join('');
   renderComparison(m,valid);
-  $('sql-pair').innerHTML=m.versions.map((v,i)=>'<article class="query-card"><div class="card-heading"><h4>'+('AB'[i])+' · '+escape(v.label)+'</h4><button type="button" data-copy="'+i+'" aria-label="Copy SQL '+('AB'[i])+'">Copy SQL</button></div><pre class="sql-code" aria-label="SQL '+('AB'[i])+'">'+sqlHTML(v.query.sql,m.versions[0].query.sql,i===1)+'</pre><div class="source-name">'+sources(v.query.sql).map(escape).join('<br>')+'</div></article>').join('');
   $('lesson').textContent=e.lesson;$('tradeoff').textContent=e.tradeoff;$('docs-link').href=e.docs;
   $('output-pair').innerHTML=m.versions.map((v,i)=>'<article class="output-card"><div class="card-heading"><h4>'+('AB'[i])+' · '+escape(v.label)+'</h4></div><div class="output-content"><p>'+(v.runtime.representative?(v.output.length?'Preview: '+v.output.length+' of '+v.runtime.representative.rowCount+' returned rows.':'Runtime captured for '+v.runtime.representative.rowCount+' returned rows. This recording keeps selected previews only.'):'Schema from a dry run. No data rows captured.')+'</p>'+previewHTML(v.output)+'<div class="field-list">'+v.query.schema.map(f=>'<span class="field">'+escape(f.name)+'<small>'+escape(f.type)+'</small></span>').join('')+'</div></div></article>').join('');
   $('result-proof').textContent=m.result==='equal'?'Full captured result fingerprints match in all runs of both versions. This verifies the bounded returned result, not an entire underlying table.':m.result==='different'?(JSON.stringify(m.versions[0].query.schema)!==JSON.stringify(m.versions[1].query.schema)?'The output fields differ. Previews keep selected fields only; fingerprints cover the complete returned rows, including fields omitted from the preview.':'Result fingerprints differ. Compare the requested scope and aggregate values before treating either approach as an optimization.'):'No complete result comparison was recorded for both versions.';
@@ -60,7 +60,7 @@ $('case-nav').addEventListener('click',event=>{const b=event.target.closest('[da
 $('case-select').addEventListener('change',()=>selectCase($('case-select').value));
 $('previous').addEventListener('click',()=>selectCase(experiments[experiments.findIndex(e=>e.id===experiment)-1].id));
 $('next').addEventListener('click',()=>selectCase(experiments[experiments.findIndex(e=>e.id===experiment)+1].id));
-$('reset').addEventListener('click',()=>{$('price-rate').value=pricing.usdPerTiB;$('price-rate').setCustomValidity('');$('price-rate').setAttribute('aria-invalid','false');$('rate-error').hidden=true;runVariant=0;view='sql';render();});
+$('reset').addEventListener('click',()=>{$('price-rate').value=pricing.usdPerTiB;$('price-rate').setCustomValidity('');$('price-rate').setAttribute('aria-invalid','false');$('rate-error').hidden=true;runVariant=0;view='output';render();});
 $('inspector-tabs').addEventListener('click',event=>{const b=event.target.closest('[data-view]');if(b)showView(b.dataset.view);});
 $('inspector-tabs').addEventListener('keydown',event=>{const b=event.target.closest('[data-view]');if(!b)return;let index=views.indexOf(b.dataset.view);if(event.key==='ArrowRight')index=(index+1)%views.length;else if(event.key==='ArrowLeft')index=(index+views.length-1)%views.length;else if(event.key==='Home')index=0;else if(event.key==='End')index=views.length-1;else return;event.preventDefault();showView(views[index],true);});
 $('run-choices').addEventListener('click',event=>{const b=event.target.closest('[data-run]');if(b){runVariant=Number(b.dataset.run);renderRuns(model());}});
