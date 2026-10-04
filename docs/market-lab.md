@@ -49,6 +49,10 @@ Review and curate the external capture before publishing a replacement. Preserve
 
 Choose a scenario in the sidebar or compact selector. The question and SQL change introduce two A/B blocks: each starts with the exact query, then its recorded reading, runtime, cost and output. Changed SQL lines are highlighted in B, and corresponding measurements align across both blocks on wider screens. On narrow screens, A and B stack in order.
 
+The floating **Focus on** panel lets readers choose reading, time, cost or output. The selected metric highlights in both A/B blocks, shows a paired summary, and offers a direct link to the relevant byte limit, execution samples, cost assumptions or output detail. Focus persists across scenario changes; Reset restores reading and the default price assumption. Missing recordings and invalid rates remain explicit. These controls inspect the bundled evidence; they do not run queries or change the captured measurements.
+
+Experiment cards have hover and keyboard-focus feedback. The question panel gives the research question visual priority, with a slowly shifting background on its focus controls. Scenario transitions, hover movement and the background animation are disabled when the system requests reduced motion.
+
 Findings follow both blocks and explain whether the captured results match, what changed in reading and time, and the interpretation limits. Expand the frozen input or technical explanation when needed. Selected output previews, runs/stages, the local byte-cap guard and measurement definitions remain in the evidence tabs below; SQL stays visible above them.
 
 The byte-cap button exercises the actual guard library against saved estimates with a local adapter. It never submits a warehouse job. `/reference` retains other public-dataset experiments; `/guard` retains the simulated cache and authorization sandbox.

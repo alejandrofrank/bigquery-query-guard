@@ -8,6 +8,8 @@ A standalone adaptation of patterns used at [Bakiano](https://bakiano.com), with
 
 The default demo is a **Bakiano query lab**: a frozen subset of real supermarket listings and pre-run SQL scenarios. Two A/B blocks put each query first, followed by its recorded scan estimate, runtime, cost and output. Findings explain the comparison underneath; the frozen input and execution evidence can be expanded for inspection. It needs no warehouse access. The cache and authorization sandbox remains available at `/guard`.
 
+Use the floating **Focus on** controls beside the question to highlight reading, time, cost or output in both cards, then open the corresponding evidence. Numbered experiment cards respond to hover and keyboard focus; a soft animated background and short scenario transitions respect reduced-motion preferences.
+
 ![Two query-first A/B blocks with recorded measurements and findings underneath.](docs/images/scan-lab.jpg)
 
 ## Try it without GCP
