@@ -47,6 +47,14 @@ npm run record:estimates -- --verify-summary
 
 Public data can change. Review the resulting diff rather than expecting permanent byte counts. Recordings contain no billing project ID, identity, job IDs, or credentials. If a recording or verification fails, the previous file is left in place.
 
+### Optional runtime measurements
+
+`npm run record:estimates -- --benchmark` executes eligible queries three times in order, with `useQueryCache: false` and a 30-second server job timeout. The recorder reserves 250,000,000 bytes before each attempt against a 15,000,000,000-byte batch ceiling, even if that attempt fails. BigQuery also receives `maximumBytesBilled` on every execution. Oversized estimates are skipped.
+
+Engine time is `endTime - startTime`; queue time is `startTime - creationTime`. Client elapsed time includes submission, network, polling, and result retrieval, and is recorded separately. Slot milliseconds represent accumulated compute work, not wall-clock time. Result-cache reuse is disabled; storage warming, slot availability, optimizer behavior, and changing public data can still affect repeated runs. These samples do not establish a universal winner.
+
+Stage records keep operation kinds, records read/written, shuffle bytes, spill bytes, and slot milliseconds. They omit step text, physical table paths, job IDs, and identities. Failures have no invented timing. Unknown billing remains unknown. Output fingerprints are for the bounded returned result; only selected aggregate field names can be stored as a small public preview.
+
 ## Guard integration
 
 The page's byte-cap check invokes `createQueryGuard` with recorded estimates and a local adapter. It demonstrates preflight refusal and exercises the real policy path. The local adapter returns schema metadata only. It submits no BigQuery job; its billing remains unknown.

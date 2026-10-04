@@ -48,9 +48,13 @@ Optional: install `@google-cloud/bigquery`, authenticate with Application Defaul
 npm run record:estimates
 # Optional: execute two count checks, each capped at 50,000,000 bytes.
 npm run record:estimates -- --verify-summary
+# Optional: record three bounded runtime samples for eligible queries.
+npm run record:estimates -- --benchmark
 ```
 
 The default recorder submits **eight dry runs only**. The optional summary check executes two fixed aggregate queries, with `maximumBytesBilled` enforced by BigQuery on each. The recorder saves only public SQL, selected statistics, and output schemas; it omits job IDs, project identifiers, and credentials. Commit a refreshed recording only after reviewing the diff. Recording again without verification removes the previously verified counts, so the lab does not claim they were checked in a newer recording.
+
+`--benchmark` is a separate opt-in that executes eligible queries three times, sequentially, with query-result-cache reuse disabled. Every attempt reserves its full **250 MB** hard cap against a **15 GB** batch ceiling. Queries with larger dry-run estimates are skipped. Recorded metadata separates engine time, queue time, client elapsed time, processed/billed bytes, slot time, and whitelisted execution-stage counters. It is not a controlled cold-cache benchmark.
 
 ## What it does
 

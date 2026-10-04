@@ -2,6 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { queries } from '../examples/query-specs.js';
+import { benchmarkQueries } from './benchmark-queries.js';
 
 // Default recording uses dry runs. Verification is a separate, explicit opt-in.
 // Record an allowlist of public-query statistics; omit job IDs, identity and billing project.
@@ -40,13 +41,14 @@ export async function verifySummary(client) {
     equal: results.transactionCount.transactions === results.blockCount.transactions };
 }
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
-  if(process.argv.slice(2).some(arg=>arg!=='--verify-summary')) throw new Error('Supported option: --verify-summary');
+  if(process.argv.slice(2).some(arg=>!['--verify-summary','--benchmark'].includes(arg))) throw new Error('Supported options: --verify-summary, --benchmark');
   if(!process.env.GOOGLE_CLOUD_PROJECT) throw new Error('Set GOOGLE_CLOUD_PROJECT to your own sandbox billing project.');
   const { BigQuery } = await import('@google-cloud/bigquery');
   const client = new BigQuery({projectId:process.env.GOOGLE_CLOUD_PROJECT});
   const data = await recordEstimates(client);
   if(process.argv.includes('--verify-summary')) data.summaryVerification = await verifySummary(client);
+  if(process.argv.includes('--benchmark')) data.benchmarks = await benchmarkQueries(client,data,{onProgress:step=>console.log(step.id+' · sample '+step.sample+'/'+step.samples)});
   await saveEstimates(data);
   console.log('Recorded '+Object.keys(queries).length+' public-data dry-run estimates. '+
-    (data.summaryVerification ? 'Executed two aggregate checks, each capped at 50 MB.' : 'No data queries executed.'));
+    (data.benchmarks ? 'Benchmark executions capped at 250 MB each; 15 GB total reservation ceiling.' : data.summaryVerification ? 'Executed two aggregate checks, each capped at 50 MB.' : 'No data queries executed.'));
 }
