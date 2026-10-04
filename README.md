@@ -6,9 +6,9 @@ A standalone adaptation of patterns used at [Bakiano](https://bakiano.com), with
 
 **[Try the demo](#try-it-without-gcp) · [Integration](#connect-your-own-bigquery-project) · [Design](docs/architecture.md) · [Guarantees](docs/guarantees.md)**
 
-The default demo is a **Bakiano query lab**: a frozen subset of real supermarket listings and pre-run SQL scenarios. Inspect the input, the question, both query versions, scan estimates, cost, runtime and output. It needs no warehouse access. The cache and authorization sandbox remains available at `/guard`.
+The default demo is a **Bakiano query lab**: a frozen subset of real supermarket listings and pre-run SQL scenarios. Two A/B blocks put each query first, followed by its recorded scan estimate, runtime, cost and output. Findings explain the comparison underneath; the frozen input and execution evidence can be expanded for inspection. It needs no warehouse access. The cache and authorization sandbox remains available at `/guard`.
 
-![Frozen Bakiano listings, a latest-day query comparison, and the recorded SQL evidence.](docs/images/scan-lab.jpg)
+![Two query-first A/B blocks with recorded measurements and findings underneath.](docs/images/scan-lab.jpg)
 
 ## Try it without GCP
 
