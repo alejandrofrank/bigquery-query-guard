@@ -12,7 +12,12 @@ test('local server serves the demo but not credentials, Git metadata or cross-or
     await Promise.race([once(child.stdout, 'data'), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Server startup timeout')), 5000); }), once(child, 'error').then(([e]) => { throw e; })]);
     clearTimeout(timer);
     const base = 'http://127.0.0.1:' + port;
-    assert.equal((await fetch(base)).status, 200);
+    const home = await fetch(base);
+    assert.equal(home.status, 200);
+    assert.match(await home.text(), /BigQuery Scan Lab/);
+    for (const path of ['/guard', '/demo/lab.js', '/demo/metrics.js', '/demo/lab.css', '/examples/query-lab.js', '/examples/query-metrics.js', '/data/query-estimates.js']) {
+      assert.equal((await fetch(base + path)).status, 200, path);
+    }
     for (const path of ['/.env', '/.env.local', '/.git/config', '/package.json', '/src/jev.js', '/data/private.csv']) assert.equal((await fetch(base + path)).status, 404);
     const foreignHostStatus = await new Promise((resolve, reject) => {
       const req = get(base, { headers: { Host: 'foreign.example' } }, res => { res.resume(); resolve(res.statusCode); });
