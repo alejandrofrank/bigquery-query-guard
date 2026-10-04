@@ -6,9 +6,9 @@ A standalone adaptation of patterns used at [Bakiano](https://bakiano.com), with
 
 **[Try the demo](#try-it-without-gcp) · [Integration](#connect-your-own-bigquery-project) · [Design](docs/architecture.md) · [Guarantees](docs/guarantees.md)**
 
-The default demo is a **BigQuery scan lab**: compare reviewed SQL variants, scan estimates, list-rate costs, real runtime samples, output, and execution stages. The cache and authorization sandbox remains available at `/guard`.
+The default demo is a **Bakiano query lab**: a frozen subset of real supermarket listings and pre-run SQL scenarios. Inspect the input, the question, both query versions, scan estimates, cost, runtime and output. It needs no warehouse access. The cache and authorization sandbox remains available at `/guard`.
 
-![The count comparison separates estimated scan cost, measured engine time, and observed billed bytes.](docs/images/scan-lab.jpg)
+![Frozen Bakiano listings, a latest-day query comparison, and the recorded SQL evidence.](docs/images/scan-lab.jpg)
 
 ## Try it without GCP
 
@@ -22,7 +22,17 @@ npm run dev
 
 Open **http://127.0.0.1:4312**.
 
-Switch between **12 experiments in three groups**: scan/output, partition/storage, and query structure. Each choice displays exact SQL and scan estimates. Eligible queries also show three real execution samples, median/range, client time, slot milliseconds, billed bytes, aggregate previews and execution-stage counters. The page replays bundled evidence; it sends no Google Cloud requests and cannot run arbitrary SQL.
+Switch between **eight Bakiano scenarios**: resolving the latest loaded day, history windows, selected columns, enrichment joins, repeated source batches, nested scalar queries, preview limits, and partition predicates. Thirteen query variants were executed three times each. The browser replays bundled input and evidence; it sends no Google Cloud requests and cannot run arbitrary SQL.
+
+Start with the latest-day case: both variants return four matching listings across three chains. Resolving the date first reduces the recorded dry-run estimate from **826.70 MB to 3.66 MB**; engine medians were **589 ms and 213 ms**. The separate date lookup has its own cost, and observed billed bytes differ from estimated scan bytes. These are recorded observations, not a universal speed guarantee.
+
+The displayed subset contains Carabobo listings whose names contain “leche.” Packages and formulations differ. Prices are **as scraped, not normalized USD**. Scan statistics describe the original partitioned warehouse reads, not the byte size of the four-row preview. [Subset, measurements, and reproduction](docs/market-lab.md).
+
+SQL, output previews, execution samples, stages and timestamps are bundled in [`data/market-recording.js`](data/market-recording.js). Private project IDs, job IDs, credentials, source URLs and customer data are omitted.
+
+### Other public reference cases
+
+The earlier **12 public-data experiments** remain at **http://127.0.0.1:4312/reference**. They use taxi trips, Bitcoin and Google Trends to explore additional query behavior. They are separate from the default Bakiano examples.
 
 | Experiment | Recorded observation | What changes |
 | --- | --- | --- |

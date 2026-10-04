@@ -1,5 +1,7 @@
 # BigQuery scan lab: evidence and limits
 
+These other public-dataset cases are now available at `/reference`. The default page uses [frozen Bakiano examples](market-lab.md), with its input and all query measurements bundled for offline replay.
+
 The lab compares reviewed SQL variants against recorded BigQuery dry-run measurements. It does not approximate costs from a synthetic row count or execute a browser's arbitrary SQL.
 
 ## What was measured

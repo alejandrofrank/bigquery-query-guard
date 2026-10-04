@@ -37,8 +37,8 @@ const server = createServer(async (req, res) => {
       finally { busy = false; }
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
-    const relative = path === '/' ? 'demo/index.html' : path === '/guard' && !catalog ? 'demo/guard.html' : decodeURIComponent(path).slice(1);
-    const allow = /^(demo\/[a-z-]+\.(html|css|js)|docs\/images\/[a-z-]+\.(svg|png|jpg)|src\/(index|cache|match|csv)\.js|data\/(catalog\.js|sample\.csv|query-estimates\.js)|examples\/(scenarios|query-lab|query-metrics)\.js)$/;
+    const relative = (path === '/' || path === '/reference') ? 'demo/index.html' : path === '/guard' && !catalog ? 'demo/guard.html' : decodeURIComponent(path).slice(1);
+    const allow = /^(demo\/[a-z-]+\.(html|css|js)|docs\/images\/[a-z-]+\.(svg|png|jpg)|src\/(index|cache|match|csv)\.js|data\/(catalog\.js|sample\.csv|(query-estimates|market-recording)\.js)|examples\/(scenarios|query-lab|query-metrics|query-comparison|market-lab)\.js)$/;
     if (!allow.test(relative)) return json(res, 404, { error: 'Not found' });
     const file = resolve(root, relative);
     if (!file.startsWith(root.endsWith(sep) ? root : root + sep)) return json(res, 404, { error: 'Not found' });
