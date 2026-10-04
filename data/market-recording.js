@@ -372,13 +372,13 @@ export const measurements = {
       ],
       "baseline": "joinId",
       "group": "market",
-      "lesson": "A listing belongs to a source and product ID. A faster join is not useful if it links the wrong enrichment record.",
+      "lesson": "Both produce eight joined rows from four input listings because enrichment has multiple schema versions. This case isolates join identity; our serving query also pins schema version 4.",
       "tradeoff": "Include the source in the enrichment join, as the application does.",
       "docs": "https://docs.cloud.google.com/bigquery/docs/best-practices-performance-compute",
       "context": {
         "data": "Frozen Bakiano subset · Carabobo listings matching leche · 2026-10-04",
         "change": "Include the source in the enrichment join, as the application does.",
-        "meaning": "A listing belongs to a source and product ID. A faster join is not useful if it links the wrong enrichment record."
+        "meaning": "Both produce eight joined rows from four input listings because enrichment has multiple schema versions. This case isolates join identity; our serving query also pins schema version 4."
       }
     },
     {
@@ -453,13 +453,13 @@ export const measurements = {
       ],
       "baseline": "allColumns",
       "group": "market",
-      "lesson": "LIMIT controls the preview size. It does not promise less reading.",
+      "lesson": "LIMIT controls the maximum preview size. This subset has only four rows, so both limits return all four. It does not promise less reading.",
       "tradeoff": "Keep the same subset, day and selected fields; reduce only the returned row limit.",
       "docs": "https://docs.cloud.google.com/bigquery/docs/best-practices-performance-compute",
       "context": {
         "data": "Frozen Bakiano subset · Carabobo listings matching leche · 2026-10-04",
         "change": "Keep the same subset, day and selected fields; reduce only the returned row limit.",
-        "meaning": "LIMIT controls the preview size. It does not promise less reading."
+        "meaning": "LIMIT controls the maximum preview size. This subset has only four rows, so both limits return all four. It does not promise less reading."
       }
     },
     {

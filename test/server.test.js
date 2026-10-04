@@ -14,8 +14,8 @@ test('local server serves the demo but not credentials, Git metadata or cross-or
     const base = 'http://127.0.0.1:' + port;
     const home = await fetch(base);
     assert.equal(home.status, 200);
-    assert.match(await home.text(), /BigQuery Scan Lab/);
-    for (const path of ['/guard', '/demo/lab.js', '/demo/metrics.js', '/demo/lab.css', '/examples/query-lab.js', '/examples/query-metrics.js', '/data/query-estimates.js']) {
+    assert.match(await home.text(), /Bakiano Query Lab/);
+    for (const path of ['/reference', '/guard', '/demo/lab.js', '/demo/metrics.js', '/demo/lab.css', '/examples/query-lab.js', '/examples/query-metrics.js', '/examples/query-comparison.js', '/examples/market-lab.js', '/data/query-estimates.js', '/data/market-recording.js']) {
       assert.equal((await fetch(base + path)).status, 200, path);
     }
     for (const path of ['/.env', '/.env.local', '/.git/config', '/package.json', '/src/jev.js', '/data/private.csv']) assert.equal((await fetch(base + path)).status, 404);

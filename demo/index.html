@@ -2,84 +2,37 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>BigQuery Scan Lab · Bakiano</title>
-  <meta name="description" content="Compare BigQuery scan estimates, list-rate cost, measured runtime and execution stages across twelve reviewed experiments.">
+  <title>Bakiano Query Lab · BigQuery</title>
+  <meta name="description" content="Choose a SQL change and compare what BigQuery reads, costs, takes and returns.">
   <link rel="icon" href="/docs/images/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/demo/lab.css"><script type="module" src="/demo/lab.js"></script>
 </head>
-<body><div class="shell">
-  <nav class="top"><a class="brand" href="/">b<span>·</span><small>BAKIANO LABS</small></a><div class="nav-links"><a href="/guard">Cache &amp; access lab</a><a href="https://github.com/alejandrofrank/bigquery-query-guard" target="_blank" rel="noreferrer">Source ↗</a></div></nav>
-  <header class="lab-header">
-    <div><h1>BigQuery scan lab</h1><p>Compare SQL, scan cost, runtime, and execution stages.</p></div>
-    <div class="recording-label"><span>Recorded public-data runs <span id="record-date"></span></span><a href="#evidence">Evidence &amp; reproduction ↓</a></div>
-  </header>
-  <nav id="groups" class="groups" aria-label="Experiment categories"></nav>
-  <nav id="experiments" class="experiments" aria-label="Query experiments"></nav>
-  <main>
-    <section class="story"><p class="eyebrow" id="experiment-number"></p><h2 id="experiment-title"></h2><p id="question"></p></section>
-    <div class="workbench">
-      <section class="query-panel panel" aria-labelledby="query-title">
-        <div class="panel-heading"><div><p class="eyebrow">01 / QUERY</p><h3 id="query-title">GoogleSQL</h3></div><button id="reset" class="quiet" type="button">↺ Reset</button></div>
-        <div id="choices" class="choices" role="group" aria-label="Query variation"></div>
-        <div class="editor">
-          <div class="editor-bar"><span><i></i> GoogleSQL <small>· reviewed examples</small></span><button id="copy-sql" class="quiet" type="button">Copy SQL</button></div>
-          <pre id="sql" aria-label="Current SQL query"></pre>
-        </div>
-        <div class="source-strip"><span>PUBLIC SOURCE</span><code id="source-name"></code></div>
-        <details class="original"><summary>Compare the original SQL</summary><pre id="original-sql"></pre></details>
-        <div class="takeaway"><span class="takeaway-mark">↳</span><div><p class="eyebrow">WHAT TO TAKE AWAY</p><p id="lesson"></p></div></div>
+<body>
+  <header class="app-header"><div><h1 id="lab-title">Bakiano query lab</h1><p id="lab-description">Saved scenarios from our supermarket data.</p></div><nav aria-label="Lab links"><a href="/reference">Reference cases</a><a href="/guard">Cache lab</a><a href="https://github.com/alejandrofrank/bigquery-query-guard" target="_blank" rel="noreferrer">Source ↗</a></nav></header>
+  <div class="workspace">
+    <aside class="case-sidebar"><h2>Experiments</h2><nav id="case-nav" aria-label="Experiments"></nav><p id="sidebar-note" class="sidebar-note">Frozen subset. Pre-run queries.</p></aside>
+    <main>
+      <div class="case-toolbar"><div class="compact-picker"><label for="case-select">Experiment</label><select id="case-select"></select></div><span id="case-position"></span><div class="step-buttons"><button id="previous" type="button" aria-label="Previous experiment">←</button><button id="next" type="button" aria-label="Next experiment">→</button></div><button id="reset" type="button" class="quiet">Reset</button><span id="record-date" class="record-date"></span></div>
+      <details id="dataset-panel" class="dataset-panel" open><summary><span>Frozen input</span> <strong id="dataset-name"></strong></summary><div id="dataset-rows"></div><p id="dataset-note"></p></details><section class="case-context" aria-labelledby="question"><p class="section-label">Question</p><h2 id="question"></h2><dl><div><dt>Data</dt><dd id="data-context"></dd></div><div><dt>Change</dt><dd id="change-context"></dd></div></dl></section>
+      <section class="comparison-panel" aria-label="Both query results">
+        <div class="comparison-heading"><h3>What changes?</h3><span id="result-status" class="status"></span></div>
+        <table class="comparison-table"><colgroup><col class="metric-col"><col><col></colgroup><thead id="comparison-head"></thead><tbody id="comparison-body"></tbody></table>
+        <div class="observation"><p id="meaning"></p><small>Runtime: median of recorded executions. Cost: USD per query at the assumed rate, before credits and tax.</small></div>
       </section>
-      <section class="result-panel panel" aria-labelledby="result-title">
-        <div class="panel-heading"><div><p class="eyebrow">02 / DRY-RUN RESULT</p><h3 id="result-title">Estimated bytes processed</h3></div><span id="change-badge" class="change-badge"></span></div>
-        <div class="scan-number"><strong id="scan-value"></strong><span id="scan-unit"></span></div>
-        <p class="estimate-note"><code id="exact-bytes"></code> bytes · not billed bytes or execution time</p>
-        <div class="comparison">
-          <div class="bar-heading"><span>Original</span><b id="baseline-bytes"></b></div>
-          <svg viewBox="0 0 640 14" preserveAspectRatio="none" class="bar baseline" aria-hidden="true"><rect id="baseline-bar" width="640" height="14" rx="4"/></svg>
-          <div class="bar-heading current"><span>Current query</span><b id="current-bytes"></b></div>
-          <svg viewBox="0 0 640 14" preserveAspectRatio="none" class="bar current" aria-hidden="true"><rect id="current-bar" width="640" height="14" rx="4"/></svg>
-        </div>
-        <div class="metrics">
-          <div class="rate-control"><label for="price-rate">Assumed on-demand rate</label><span>$ <input id="price-rate" type="number" min="0" max="1000" step="0.25" value="6.25" aria-describedby="price-note"> / TiB</span></div>
-          <div class="metric-grid">
-            <div><span>Scan × rate</span><strong id="scan-cost"></strong><small>dry-run estimate</small></div>
-            <div><span>Engine time</span><strong id="engine-time"></strong><small id="runtime-note"></small></div>
-            <div><span>Billed bytes × rate</span><strong id="billed-cost"></strong><small id="billed-note"></small></div>
-          </div>
-          <p id="price-note" class="metric-note">USD before free allowance, discounts and tax. Scan cost excludes billing minimums. These are calculations, not an invoice.</p>
-          <div class="table-scroll"><table class="runtime-comparison"><thead><tr><th>Version</th><th>Engine median</th><th>Slot-ms median</th></tr></thead><tbody id="runtime-comparison"></tbody></table></div>
-          <p class="metric-note" id="sample-note"></p>
-          <details id="runtime-details"><summary>Inspect samples &amp; execution stages</summary><div class="table-scroll"><table><thead><tr><th>Run</th><th>Engine</th><th>Client</th><th>Queue</th><th>Slot-ms</th><th>Billed bytes</th></tr></thead><tbody id="samples"></tbody></table></div><p class="metric-note" id="stage-note"></p><div class="table-scroll"><table><thead><tr><th>Stage / operations</th><th>Rows read → written</th><th>Shuffle</th><th>Slot-ms</th></tr></thead><tbody id="stages"></tbody></table></div></details>
-        </div>
-        <div class="output">
-          <div class="output-heading"><h4>What comes back?</h4><span id="output-shape"></span></div>
-          <div id="result-count" class="result-count" hidden><strong></strong><span>transactions · recorded result</span></div>
-          <div id="output-fields" class="output-fields"></div>
-          <details id="more-fields" hidden><summary id="more-fields-label"></summary><div id="all-fields" class="output-fields"></div></details>
-          <p class="output-note" id="output-note"></p>
-          <div id="output-preview" class="table-scroll"></div>
-          <p class="output-note" id="result-comparison"></p>
-        </div>
-        <div class="tradeoff"><p class="eyebrow">THE TRADEOFF</p><p id="tradeoff"></p></div>
-      </section>
-    </div>
-    <section class="guardrail panel">
-      <div><p class="eyebrow">03 / PUT A BOUNDARY AROUND IT</p><h3>Would your app let this query through?</h3><p>A fresh request through the real guard library, using a local adapter.</p></div>
-      <div class="cap-controls"><label for="byte-cap">Per-query cap</label><select id="byte-cap"><option value="100000000">100 MB</option><option value="1000000000">1 GB</option><option value="10000000000">10 GB</option><option value="200000000000">200 GB</option></select><button id="check-cap" class="primary" type="button">Check this query →</button></div>
-      <div id="cap-result" class="cap-result" role="status">No query is submitted to Google Cloud from this page.</div>
-    </section>
-    <details id="evidence" class="evidence-panel panel"><summary><span>Evidence, exact bytes &amp; reproduction</span><span>Recorded, inspectable, repeatable ↗</span></summary><div class="evidence-body">
-      <div><h4>What these numbers mean</h4><p>Each SQL variant was sent to BigQuery with <code>dryRun: true</code> and <code>useQueryCache: false</code>. The page replays estimates and schema, plus three sequential execution samples for eligible queries.</p><p>Engine time comes from job start/end timestamps. Client time includes request and result retrieval. Slot-ms measures aggregate compute work, not wall time or an on-demand charge. Cache was disabled; storage warmth, slot availability and execution order were not controlled.</p><p>The default $6.25/TiB is an adjustable US on-demand list-rate assumption, checked on 4 October 2026. <a href="https://cloud.google.com/bigquery" target="_blank" rel="noreferrer">Google pricing ↗</a></p><a id="docs-link" target="_blank" rel="noreferrer">Read the query documentation ↗</a></div>
-      <div><h4>Current recording</h4><pre id="record-details"></pre><p id="verification-note"></p><p>The public Bitcoin endpoints are views. We do not infer their physical partition counts from these measurements.</p></div>
-      <div><h4>Reproduce in your own project</h4><pre>npm install @google-cloud/bigquery
+      <section class="inspector" aria-label="Inspect the evidence">
+        <div id="inspector-tabs" role="tablist" aria-label="Inspect the experiment"><button type="button" id="tab-sql" role="tab" data-view="sql" aria-controls="pane-sql">SQL</button><button type="button" id="tab-output" role="tab" data-view="output" aria-controls="pane-output">Output</button><button type="button" id="tab-runs" role="tab" data-view="runs" aria-controls="pane-runs">Runs &amp; plan</button><button type="button" id="tab-limits" role="tab" data-view="limits" aria-controls="pane-limits">Byte limit</button><button type="button" id="tab-method" role="tab" data-view="method" aria-controls="pane-method">How measured</button></div>
+        <div id="pane-sql" role="tabpanel" aria-labelledby="tab-sql"><div class="pane-intro"><p>Compare the actual SQL. Added or changed lines in B are highlighted.</p></div><div id="sql-pair" class="paired-panels"></div><details class="explanation"><summary>Why this happens &amp; what to watch for</summary><p id="lesson"></p><p id="tradeoff"></p><a id="docs-link" target="_blank" rel="noreferrer">Google query documentation ↗</a></details></div>
+        <div id="pane-output" role="tabpanel" aria-labelledby="tab-output" hidden><div class="pane-intro"><p>Selected listing fields and aggregate previews. Missing recordings remain unknown.</p></div><div id="output-pair" class="paired-panels"></div><p id="result-proof" class="detail-note"></p></div>
+        <div id="pane-runs" role="tabpanel" aria-labelledby="tab-runs" hidden><div class="pane-intro"><div id="run-choices" role="group" aria-label="Query to inspect"></div><p>Three sequential samples, result cache disabled. Engine time differs from client time and slot work.</p></div><div id="run-content"></div></div>
+        <div id="pane-limits" role="tabpanel" aria-labelledby="tab-limits" hidden><div class="pane-intro"><h3>Check the query before execution</h3><p>The real guard library checks a recorded estimate through a local adapter. This control does not execute BigQuery.</p></div><div class="limit-controls"><label for="limit-version">Query</label><select id="limit-version"></select><label for="byte-cap">Byte cap</label><select id="byte-cap"><option value="100000000">100 MB</option><option value="1000000000">1 GB</option><option value="10000000000">10 GB</option><option value="200000000000">200 GB</option></select><button id="check-cap" type="button">Check limit</button></div><p id="cap-result" role="status" class="detail-note">No query submitted.</p></div>
+        <div id="pane-method" role="tabpanel" aria-labelledby="tab-method" hidden><div class="method-grid"><div><h3>Read and cost</h3><p>Data read is the dry-run scan estimate. Estimated cost is bytes ÷ 2⁴⁰ × USD/TiB. Measured cost uses observed billed bytes; it can differ because of pruning and billing minimums.</p><label class="rate-control" for="price-rate">Assumed USD/TiB <input id="price-rate" type="number" min="0" max="1000" step="0.25" value="6.25"></label><p id="rate-error" role="status" hidden>Enter a rate from 0 to 1000 USD/TiB.</p><p>Default US on-demand list-rate assumption: $6.25/TiB, checked 4 October 2026. Costs exclude free allowance, discounts and tax; estimated scan cost also excludes billing minimums.</p><a href="https://cloud.google.com/bigquery" target="_blank" rel="noreferrer">Google pricing ↗</a></div><div><h3>Time and output</h3><p>Engine time is job end minus start. Client time includes submission, network, polling and result retrieval. Slot-ms is accumulated compute work, not elapsed time or an on-demand charge.</p><p id="capture-limits"></p><p id="record-details"></p><p id="source-facts"></p></div><div><h3>Reproduce</h3><pre>npm install @google-cloud/bigquery
 gcloud auth application-default login
-# Set GOOGLE_CLOUD_PROJECT to your sandbox project.
+# Set GOOGLE_CLOUD_PROJECT to your sandbox.
 npm run record:estimates
-# Optional: three capped samples per eligible query
-npm run record:estimates -- --benchmark
-# Or only two aggregate checks, at 50 MB each
-npm run record:estimates -- --verify-summary</pre><p>The default recorder performs dry runs only. Benchmarks cap each attempt at 300 MB and reserve it against a 15 GB batch ceiling. Refreshed sources can make a previously eligible query fail the cap. Missing runs remain unknown.</p></div>
-    </div></details>
-  </main>
-  <footer><span>Query Guard · built from Bakiano's cost-first data patterns</span><a href="https://bakiano.com">Bakiano ↗</a></footer>
-</div></body></html>
+# Opt in to capped executions:
+npm run record:estimates -- --benchmark</pre><p>Default recording uses dry runs and source metadata only. Review refreshed measurements before committing them.</p></div></div></div>
+      </section>
+      <footer>Recorded evidence, not a live query console. <a href="https://bakiano.com">Bakiano ↗</a></footer>
+    </main>
+  </div>
+</body></html>
