@@ -2,14 +2,27 @@ const reference=location.pathname==='/reference';
 const {experiments,groups,measurements,checkLimit}=await import(reference?'/examples/query-lab.js':'/examples/market-lab.js');
 import {comparisonFor} from '/examples/query-comparison.js';
 import {pricing} from '/examples/query-metrics.js';
-import {renderComparison,previewHTML,escape,number,bytes,duration} from '/demo/metrics.js';
+import {renderComparison,previewHTML,escape,number,bytes,duration,money} from '/demo/metrics.js';
 const $=id=>document.getElementById(id);
 const views=['output','runs','limits','method'];
 const labels={limit:'Return fewer rows',columns:'Read fewer columns',dates:'Filter an unpartitioned date',time:'Filter time in a view',summary:'Count versus a summary',partitions:'Read fewer partitions',predicate:'Change the date predicate',union:'Keep or remove duplicates',joins:'Group before joining',correlated:'Sum nested arrays',cross:'All pairs versus matching pairs',cte:'Reuse a WITH expression'};
 const params=new URLSearchParams(location.search);
 let experiment=experiments.some(e=>e.id===params.get('case'))?params.get('case'):reference?'summary':experiments[0].id;
-let view=views.includes(params.get('view'))?params.get('view'):'output',runVariant=0,guardSequence=0;
+let view=views.includes(params.get('view'))?params.get('view'):'output',runVariant=0,guardSequence=0,focusMetric='read';
+const focusEvidence={read:{view:'limits',label:'Inspect byte limit'},time:{view:'runs',label:'Inspect execution samples'},cost:{view:'method',label:'Inspect cost assumptions'},output:{view:'output',label:'Inspect output detail'}};
+const reducedMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 function model(){const rate=$('price-rate').valueAsNumber;return comparisonFor(experiment,Number.isFinite(rate)&&rate>=0&&rate<=1000?rate:pricing.usdPerTiB,measurements,experiments);}
+function renderFocus(m,validRate=true){
+  const [a,b]=m.versions,differentFields=JSON.stringify(a.query.schema)!==JSON.stringify(b.query.schema);
+  const values={read:'A '+bytes(a.query.bytes)+' → B '+bytes(b.query.bytes),time:m.timeChange===null?'No paired runtime recording':'A '+duration(a.runtime.jobMs)+' → B '+duration(b.runtime.jobMs),cost:validRate?'A '+money(a.estimatedCost)+' → B '+money(b.estimatedCost):'Enter a valid rate',output:m.result==='equal'?'Captured outputs match':m.result==='different'?(differentFields?'Output fields differ':'Captured outputs differ'):'Output comparison unavailable'};
+  const readDelta=m.scanChange===null?'Scan change cannot be compared.':Math.abs(m.scanChange)<.05?'Same dry-run estimate.':Math.abs(m.scanChange).toFixed(1)+'% '+(m.scanChange<0?'less':'more')+' estimated reading in B.';
+  const timeDelta=m.timeChange===null?'At least one query has no execution samples. Runtime remains unknown.':(Math.abs(m.timeChange)<.05?'Same recorded engine median.':Math.abs(m.timeChange).toFixed(1)+'% '+(m.timeChange<0?'less':'more')+' recorded time in B.')+' Three samples; not a speed guarantee.';
+  const notes={read:readDelta+' Dry-run bytes are not billed bytes.',time:timeDelta,cost:validRate?'Scan × assumed rate. Billed-byte costs are separate.':'Set the rate in How measured.',output:m.result==='equal'?'Full bounded result fingerprints match. Inspect the fields and previews.':m.result==='different'?'Different results need a scope check before comparing efficiency.':'Schemas alone cannot verify result equality.'};
+  $('sql-pair').dataset.focus=focusMetric;
+  for(const button of $('focus-controls').querySelectorAll('[data-focus]'))button.setAttribute('aria-pressed',String(button.dataset.focus===focusMetric));
+  $('focus-value').textContent=values[focusMetric];$('focus-note').textContent=notes[focusMetric];
+  $('focus-inspect').textContent=focusEvidence[focusMetric].label+' →';
+}
 function showView(next,focus=false){
   view=next;
   for(const item of views){const active=item===view;$('tab-'+item).setAttribute('aria-selected',String(active));$('tab-'+item).tabIndex=active?0:-1;$('pane-'+item).hidden=!active;}
@@ -31,11 +44,12 @@ function renderRuns(m){
 }
 function render(){
   ++guardSequence;const m=model(),e=m.experiment,index=experiments.indexOf(e);
-  $('case-nav').innerHTML=groups.map(g=>'<section><h3>'+escape(g.label)+'</h3>'+experiments.filter(item=>item.group===g.id).map(item=>'<button type="button" data-case="'+item.id+'" aria-current="'+(item.id===experiment)+'">'+escape(labels[item.id]??item.label)+'</button>').join('')+'</section>').join('');
+  $('case-nav').innerHTML=groups.map(g=>'<section><h3>'+escape(g.label)+'</h3>'+experiments.filter(item=>item.group===g.id).map(item=>'<button type="button" data-case="'+item.id+'" aria-label="'+escape(labels[item.id]??item.label)+'" aria-current="'+(item.id===experiment)+'"><span class="experiment-index" aria-hidden="true">'+String(experiments.indexOf(item)+1).padStart(2,'0')+'</span><span class="experiment-label">'+escape(labels[item.id]??item.label)+'</span><span class="experiment-arrow" aria-hidden="true">↗</span></button>').join('')+'</section>').join('');
   $('case-select').innerHTML=groups.map(g=>'<optgroup label="'+escape(g.label)+'">'+experiments.filter(item=>item.group===g.id).map(item=>'<option value="'+item.id+'" '+(item.id===experiment?'selected':'')+'>'+escape(labels[item.id]??item.label)+'</option>').join('')+'</optgroup>').join('');
   $('case-position').textContent=(index+1)+' / '+experiments.length;$('previous').disabled=index===0;$('next').disabled=index===experiments.length-1;
   $('record-date').textContent='Recorded · '+measurements.capturedAt.slice(0,10);
   $('question').textContent=e.question;$('data-context').textContent=m.context.data;$('change-context').textContent=m.context.change;
+  $('question-position').textContent='Experiment '+String(index+1).padStart(2,'0')+' / '+String(experiments.length).padStart(2,'0');
   $('lab-title').textContent=reference?'BigQuery reference cases':'Bakiano query lab';
   $('lab-description').textContent=reference?'Other public datasets, recorded for reference.':'Saved scenarios from our supermarket data. Choose a SQL change and compare the recorded result.';
   $('sidebar-note').textContent=reference?'Public datasets. Saved measurements. No cloud requests.':'Frozen Bakiano subset. Pre-run queries. No warehouse access needed.';
@@ -44,6 +58,7 @@ function render(){
   const valid=$('price-rate').value!==''&&$('price-rate').validity.valid;
   $('sql-pair').innerHTML=m.versions.map((v,i)=>'<article class="variant-card" aria-labelledby="variant-'+i+'-title"><header class="variant-heading"><div class="variant-label"><span aria-hidden="true">'+('AB'[i])+'</span><h3 id="variant-'+i+'-title" aria-label="'+('AB'[i])+' · '+escape(v.label)+'">'+escape(v.label)+'</h3></div><button type="button" data-copy="'+i+'" aria-label="Copy SQL '+('AB'[i])+'">Copy SQL</button></header><div class="variant-query"><pre class="sql-code" aria-label="SQL '+('AB'[i])+'">'+sqlHTML(v.query.sql,m.versions[0].query.sql,i===1)+'</pre><div class="source-name">'+sources(v.query.sql).map(escape).join('<br>')+'</div></div><div class="variant-results"><h4>Recorded results</h4><dl id="variant-'+i+'-metrics" class="variant-metrics"></dl></div></article>').join('');
   renderComparison(m,valid);
+  renderFocus(m,valid);
   $('lesson').textContent=e.lesson;$('tradeoff').textContent=e.tradeoff;$('docs-link').href=e.docs;
   $('output-pair').innerHTML=m.versions.map((v,i)=>'<article class="output-card"><div class="card-heading"><h4>'+('AB'[i])+' · '+escape(v.label)+'</h4></div><div class="output-content"><p>'+(v.runtime.representative?(v.output.length?'Preview: '+v.output.length+' of '+v.runtime.representative.rowCount+' returned rows.':'Runtime captured for '+v.runtime.representative.rowCount+' returned rows. This recording keeps selected previews only.'):'Schema from a dry run. No data rows captured.')+'</p>'+previewHTML(v.output)+'<div class="field-list">'+v.query.schema.map(f=>'<span class="field">'+escape(f.name)+'<small>'+escape(f.type)+'</small></span>').join('')+'</div></div></article>').join('');
   $('result-proof').textContent=m.result==='equal'?'Full captured result fingerprints match in all runs of both versions. This verifies the bounded returned result, not an entire underlying table.':m.result==='different'?(JSON.stringify(m.versions[0].query.schema)!==JSON.stringify(m.versions[1].query.schema)?'The output fields differ. Previews keep selected fields only; fingerprints cover the complete returned rows, including fields omitted from the preview.':'Result fingerprints differ. Compare the requested scope and aggregate values before treating either approach as an optimization.'):'No complete result comparison was recorded for both versions.';
@@ -55,17 +70,23 @@ function render(){
   $('source-facts').textContent=[...new Set(m.versions.flatMap(v=>sources(v.query.sql)))].map(name=>{const source=measurements.sources?.[name];return name+': '+(source?.partitioning?source.partitioning.type+' partition on '+source.partitioning.field:source?.type==='VIEW'?'view; physical partition layout not exposed':'table; no date partition configuration')+'.';}).join(' ');
   showView(view);
 }
-function selectCase(id){experiment=id;runVariant=0;render();}
-$('case-nav').addEventListener('click',event=>{const b=event.target.closest('[data-case]');if(b)selectCase(b.dataset.case);});
+function selectCase(id){
+  if(id===experiment)return;
+  experiment=id;runVariant=0;render();
+  if(!reducedMotion())for(const element of document.querySelectorAll('.question-content,.focus-console,.variant-card'))element.animate([{opacity:.55,transform:'translateY(6px)'},{opacity:1,transform:'translateY(0)'}],{duration:240,easing:'ease-out'});
+}
+$('case-nav').addEventListener('click',event=>{const b=event.target.closest('[data-case]');if(b){const restore=document.activeElement===b;selectCase(b.dataset.case);if(restore)$('case-nav').querySelector('[aria-current="true"]').focus({preventScroll:true});}});
 $('case-select').addEventListener('change',()=>selectCase($('case-select').value));
 $('previous').addEventListener('click',()=>selectCase(experiments[experiments.findIndex(e=>e.id===experiment)-1].id));
 $('next').addEventListener('click',()=>selectCase(experiments[experiments.findIndex(e=>e.id===experiment)+1].id));
-$('reset').addEventListener('click',()=>{$('price-rate').value=pricing.usdPerTiB;$('price-rate').setCustomValidity('');$('price-rate').setAttribute('aria-invalid','false');$('rate-error').hidden=true;runVariant=0;view='output';render();});
+$('reset').addEventListener('click',()=>{$('price-rate').value=pricing.usdPerTiB;$('price-rate').setCustomValidity('');$('price-rate').setAttribute('aria-invalid','false');$('rate-error').hidden=true;runVariant=0;view='output';focusMetric='read';render();});
+$('focus-controls').addEventListener('click',event=>{const button=event.target.closest('[data-focus]');if(button){focusMetric=button.dataset.focus;renderFocus(model(),$('price-rate').value!==''&&$('price-rate').validity.valid);}});
+$('focus-inspect').addEventListener('click',()=>{showView(focusEvidence[focusMetric].view);$('tab-'+view).focus({preventScroll:true});$('inspector-tabs').scrollIntoView({behavior:reducedMotion()?'instant':'smooth',block:'start'});});
 $('inspector-tabs').addEventListener('click',event=>{const b=event.target.closest('[data-view]');if(b)showView(b.dataset.view);});
 $('inspector-tabs').addEventListener('keydown',event=>{const b=event.target.closest('[data-view]');if(!b)return;let index=views.indexOf(b.dataset.view);if(event.key==='ArrowRight')index=(index+1)%views.length;else if(event.key==='ArrowLeft')index=(index+views.length-1)%views.length;else if(event.key==='Home')index=0;else if(event.key==='End')index=views.length-1;else return;event.preventDefault();showView(views[index],true);});
 $('run-choices').addEventListener('click',event=>{const b=event.target.closest('[data-run]');if(b){runVariant=Number(b.dataset.run);renderRuns(model());}});
 $('sql-pair').addEventListener('click',async event=>{const b=event.target.closest('[data-copy]');if(!b)return;try{await navigator.clipboard.writeText(model().versions[Number(b.dataset.copy)].query.sql);b.textContent='Copied';}catch{b.textContent='Select SQL to copy';}});
-$('price-rate').addEventListener('input',()=>{const rate=$('price-rate').valueAsNumber,valid=Number.isFinite(rate)&&rate>=0&&rate<=1000;$('price-rate').setCustomValidity(valid?'':'Enter a rate from 0 to 1000 USD/TiB.');$('price-rate').setAttribute('aria-invalid',String(!valid));$('rate-error').hidden=valid;renderComparison(model(),valid);});
+$('price-rate').addEventListener('input',()=>{const rate=$('price-rate').valueAsNumber,valid=Number.isFinite(rate)&&rate>=0&&rate<=1000;$('price-rate').setCustomValidity(valid?'':'Enter a rate from 0 to 1000 USD/TiB.');$('price-rate').setAttribute('aria-invalid',String(!valid));$('rate-error').hidden=valid;const m=model();renderComparison(m,valid);renderFocus(m,valid);});
 for(const id of ['limit-version','byte-cap'])$(id).addEventListener('change',()=>{++guardSequence;$('check-cap').disabled=false;$('cap-result').textContent='Check this version against the selected cap.';$('cap-result').className='detail-note';});
 $('check-cap').addEventListener('click',async()=>{const token=++guardSequence;$('check-cap').disabled=true;try{const result=await checkLimit(experiment,Number($('limit-version').value),$('byte-cap').value);if(token!==guardSequence)return;$('cap-result').className='detail-note '+(result.allowed?'allowed':'blocked');$('cap-result').textContent=result.allowed?'Allowed by the guard. Local adapter reached; no BigQuery execution and no observed billing.':'Blocked: '+bytes(result.estimatedBytes)+' estimated, '+bytes(result.limitBytes)+' cap. Execution was never reached.';}catch(error){if(token===guardSequence)$('cap-result').textContent=error.message;}finally{if(token===guardSequence)$('check-cap').disabled=false;}});
 render();
