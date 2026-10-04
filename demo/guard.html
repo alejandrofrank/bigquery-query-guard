@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BigQuery Query Guard · Bakiano</title><meta name="description" content="Watch a query cross authorization, cache, dry-run and engine-level byte limits."><link rel="icon" href="/docs/images/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/demo/style.css"><link rel="stylesheet" href="/demo/guard.css"><script type="module" src="/demo/app.js"></script></head>
 <body><div class="wrap">
-<nav><a class="brand" href="https://bakiano.com">Bakiano<span> / labs</span></a><div class="row"><span class="pill">Real guard · simulated warehouse</span><a href="https://github.com/alejandrofrank/bigquery-query-guard">GitHub ↗</a></div></nav>
-<header class="hero"><div><div class="eyebrow">02 / BigQuery Query Guard</div><h1>Every query.<br><em>A boundary.</em></h1><p>Authorize before the cache. Estimate before execution.<br>Keep an engine-enforced byte limit on every warehouse query.</p></div><img class="hero-mark" src="/docs/images/icon.svg" alt="" width="155" height="130"></header>
+<nav><a class="brand" href="/">Bakiano<span> / labs</span></a><div class="row"><a href="/">Scan lab</a><span class="pill">Real guard · simulated warehouse</span><a href="https://github.com/alejandrofrank/bigquery-query-guard">GitHub ↗</a></div></nav>
+<header class="guard-header"><h1>Query cache and access lab</h1><p>Inspect authorization, scoped cache reuse, and byte limits using local adapters.</p></header>
 <div class="flow"><b>Application request</b><span class="arrow">→</span><b>Query Guard</b><span class="arrow">→</span><b>Memory / shared cache</b><span class="arrow">→</span><b>BigQuery</b><span class="muted"> &nbsp; / &nbsp; Zero cloud calls in this sandbox</span></div>
 <main>
 <div class="workbench">
