@@ -12,6 +12,8 @@ Use the floating **Focus on** controls beside the question to highlight reading,
 
 ![Two query-first A/B blocks with recorded measurements and findings underneath.](docs/images/scan-lab.jpg)
 
+Use **Colors** in the header to try Graphite / amber, Slate / cyan or Ink / lilac. The selection is saved locally and does not rerun queries. Outcome colors retain their meaning. [Palette controls](docs/palettes.md).
+
 ## Try it without GCP
 
 Node.js 22 or newer. No dependency installation or cloud credentials required.
